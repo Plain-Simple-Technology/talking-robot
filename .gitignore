@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# Secrets. The API key never goes in Git.
+.env
+*.key
+secrets/
+
+# Logs and recordings made during sessions
+*.log
+*.wav
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
