@@ -8,6 +8,8 @@ of where it starts.
 Run it:
 
     python3 nuc/body_sim.py
+    python3 nuc/body_sim.py --face near    look sees one wide face, id 1
+    python3 nuc/body_sim.py --face far     look sees the same face, narrow
 
 Then, in another terminal:
 
@@ -18,6 +20,7 @@ Stop it with Ctrl-C. Every answer carries "sim": true so you can tell it
 from the real hub.
 """
 
+import argparse
 import json
 import math
 import socket
@@ -41,6 +44,14 @@ BATTERY_V = 12.6
 
 COMMANDS = ("ping", "status", "move", "turn", "stop", "look")
 
+# The pretend camera. Field names are from docs/PROTOCOL.md.
+# The HuskyLens picture is 320 wide and 240 tall. A close face is wide.
+FACES = {
+    "none": [],
+    "far": [{"id": 1, "x": 160, "y": 120, "width": 30, "height": 30}],
+    "near": [{"id": 1, "x": 160, "y": 120, "width": 120, "height": 120}],
+}
+
 
 def wrap_deg(deg):
     """Wrap an angle to the range -180 to 180."""
@@ -50,7 +61,10 @@ def wrap_deg(deg):
 class BodySim:
     """Where the pretend robot is, and what it does when asked."""
 
-    def __init__(self):
+    def __init__(self, face="none"):
+        if face not in FACES:
+            raise ValueError("face must be one of %s" % ", ".join(FACES))
+        self.face = face
         self.x = 0.0            # cm. The wall is at x = WALL_X_CM
         self.y = 0.0            # cm. Plus is to the left of the start heading
         self.heading = 0.0      # degrees. 0 faces the wall. Left is positive
@@ -149,7 +163,7 @@ class BodySim:
         return self.ok("stop", msg="Stopped")
 
     def do_look(self, ask):
-        return self.ok("look", objects=[])
+        return self.ok("look", objects=[dict(f) for f in FACES[self.face]])
 
     # Helpers
 
@@ -212,27 +226,33 @@ class Server(socketserver.ThreadingTCPServer):
         self.sim = sim or BodySim()
 
 
-def start_in_thread(host=HOST, port=0):
+def start_in_thread(host=HOST, port=0, face="none"):
     """Start a pretend body in the background. Returns the server.
 
     Port 0 picks a free port. Read it from server.server_address[1].
-    Used by the tests. Call server.shutdown() when done.
+    face is "none", "far" or "near". Used by the tests.
+    Call server.shutdown() when done.
     """
-    server = Server((host, port))
+    server = Server((host, port), BodySim(face=face))
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server
 
 
 def main(argv):
-    port = int(argv[1]) if len(argv) > 1 else PORT
+    parser = argparse.ArgumentParser(description="The pretend robot body.")
+    parser.add_argument("--port", type=int, default=PORT, help="port to listen on (default 8765)")
+    parser.add_argument("--face", choices=sorted(FACES), default="none",
+                        help="what the pretend camera sees: none, far or near (default none)")
+    args = parser.parse_args(argv[1:])
     try:
-        server = Server((HOST, port))
+        server = Server((HOST, args.port), BodySim(face=args.face))
     except OSError as e:
-        print("Could not listen on port %d: %s" % (port, e))
+        print("Could not listen on port %d: %s" % (args.port, e))
         print("Is another pretend body already running? Stop it with Ctrl-C.")
         return 1
-    print("Pretend body on port %d. Wall at %.0f cm. Ctrl-C to stop." % (port, WALL_X_CM))
+    print("Pretend body on port %d. Wall at %.0f cm. Face: %s. Ctrl-C to stop."
+          % (args.port, WALL_X_CM, args.face), flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

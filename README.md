@@ -67,6 +67,19 @@ python3 nuc/body_client.py square
 
 Stop the pretend body with Ctrl-C.
 
+## Pretend faces
+
+The pretend body has a pretend camera. By default `look` sees nobody.
+
+```
+python3 nuc/body_sim.py --face near
+python3 nuc/body_sim.py --face far
+```
+
+With `near`, `look` returns one wide face with id 1. With `far`, the same
+face is narrow. Use these to test the watching loop before the HuskyLens
+is wired. The field names are in `docs/PROTOCOL.md`.
+
 ## Week 1: the wheel math
 
 From the `nuc` folder:

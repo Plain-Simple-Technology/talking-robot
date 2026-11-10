@@ -26,7 +26,7 @@ The pretend body adds `"sim": true` to every answer. The real body does not.
 | move | `{"cmd":"move","forward_cm":50,"strafe_cm":0,"speed":0.5}` | how far it really went, and why it stopped |
 | turn | `{"cmd":"turn","deg":90}` | how far it really turned |
 | stop | `{"cmd":"stop"}` | `{"ok":true,"cmd":"stop","msg":"Stopped"}` |
-| look | `{"cmd":"look"}` | `{"ok":true,"cmd":"look","objects":[]}` until the stretch goal |
+| look | `{"cmd":"look"}` | the faces the HuskyLens sees. See below |
 
 ### status
 
@@ -81,6 +81,32 @@ Fields in the ask. All are optional. A missing one is zero, or 0.5 for speed.
 {"ok": true, "cmd": "turn", "turned_deg": 90.0, "heading_deg": 90.0}
 ```
 
+### look
+
+`objects` is a list with one entry per face in view. Empty when nobody is
+there. The HuskyLens picture is 320 wide and 240 tall. `x` and `y` are
+the center of the face in that picture. `width` and `height` are its size
+in the same units. A close face is wide. A far face is narrow.
+
+```
+{"ok": true, "cmd": "look",
+ "objects": [{"id": 1, "x": 160, "y": 120, "width": 120, "height": 120}]}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `id` | The face's learned ID. The HuskyLens gives a face it has not learned an id of 0 |
+| `x` | Center of the face, left to right, 0 to 320 |
+| `y` | Center of the face, top to bottom, 0 to 240 |
+| `width` | How wide the face is in the picture. This is the "near" number |
+| `height` | How tall the face is in the picture |
+
+Nobody in view:
+
+```
+{"ok": true, "cmd": "look", "objects": []}
+```
+
 ## What the body refuses
 
 A command that is not one of the six:
@@ -127,6 +153,15 @@ above. It keeps track of where it is. There is one pretend wall, 150 cm
 ahead of where it starts. A long forward move ends at the wall with
 `stopped_by: obstacle` and `front_cm` of 30. Turn away from the wall and
 the way ahead is clear.
+
+The pretend body has a pretend camera too. By default it sees nobody.
+Start it with `--face near` and `look` returns one wide face with id 1.
+Start it with `--face far` and the same face is narrow. That is enough to
+test the watching loop without the robot.
+
+```
+python3 nuc/body_sim.py --face near
+```
 
 The pretend body moves instantly. The real body takes time, and that is
 where the time limit matters.

@@ -1,4 +1,4 @@
-"""Eleven tests for the starter kit.
+"""Fourteen tests for the starter kit.
 
 Run from the kit folder:
 
@@ -7,7 +7,8 @@ Run from the kit folder:
 They cover the three wheel patterns in the Week 1 table, the power cap,
 ping and status, a move that ends at the obstacle limit, a square that
 returns to its start, a refused bad command, a garbage line that gets an
-error instead of a crash, and the 3 meter cap.
+error instead of a crash, the 3 meter cap, and the pretend camera's three
+settings: none, far and near.
 """
 
 import os
@@ -53,12 +54,24 @@ def test_power_cap():
 # The pretend body, through the client.
 
 @pytest.fixture
-def body():
-    server = body_sim.start_in_thread()
-    port = server.server_address[1]
-    yield Body(port=port)
-    server.shutdown()
-    server.server_close()
+def make_body():
+    """A factory: make_body(face) starts a pretend body and returns a Body."""
+    servers = []
+
+    def make(face="none"):
+        server = body_sim.start_in_thread(face=face)
+        servers.append(server)
+        return Body(port=server.server_address[1])
+
+    yield make
+    for server in servers:
+        server.shutdown()
+        server.server_close()
+
+
+@pytest.fixture
+def body(make_body):
+    return make_body()
 
 
 def test_ping(body):
@@ -123,3 +136,35 @@ def test_garbage_line_gets_error_not_crash(body):
     assert "not JSON" in reply
     # The body is still alive.
     assert body.ping()["ok"] is True
+
+
+# The pretend camera. Field names are from docs/PROTOCOL.md.
+
+FACE_FIELDS = {"id", "x", "y", "width", "height"}
+
+
+def test_look_none(body):
+    answer = body.look()
+    assert answer["ok"] is True
+    assert answer["objects"] == []
+    assert answer["sim"] is True
+
+
+def test_look_far(make_body):
+    answer = make_body("far").look()
+    assert answer["sim"] is True
+    assert len(answer["objects"]) == 1
+    face = answer["objects"][0]
+    assert set(face) == FACE_FIELDS
+    assert face["id"] == 1
+    assert 0 < face["width"] < 60
+
+
+def test_look_near(make_body):
+    near = make_body("near").look()["objects"][0]
+    far = make_body("far").look()["objects"][0]
+    assert set(near) == FACE_FIELDS
+    assert near["id"] == 1
+    assert near["width"] >= 100
+    assert near["width"] > far["width"]
+    assert make_body("near").look()["sim"] is True
