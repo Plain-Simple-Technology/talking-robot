@@ -10,6 +10,7 @@ Run it:
     python3 nuc/body_sim.py
     python3 nuc/body_sim.py --face near    look sees one wide face, id 1
     python3 nuc/body_sim.py --face far     look sees the same face, narrow
+    python3 nuc/body_sim.py --face near --face-x 40    the face is off to the left
 
 Then, in another terminal:
 
@@ -46,10 +47,13 @@ COMMANDS = ("ping", "status", "move", "turn", "stop", "look")
 
 # The pretend camera. Field names are from docs/PROTOCOL.md.
 # The HuskyLens picture is 320 wide and 240 tall. A close face is wide.
+# x is where the face sits, left to right. The middle is 160.
+PICTURE_WIDTH = 320
+FACE_X = 160
 FACES = {
     "none": [],
-    "far": [{"id": 1, "x": 160, "y": 120, "width": 30, "height": 30}],
-    "near": [{"id": 1, "x": 160, "y": 120, "width": 120, "height": 120}],
+    "far": [{"id": 1, "x": FACE_X, "y": 120, "width": 30, "height": 30}],
+    "near": [{"id": 1, "x": FACE_X, "y": 120, "width": 120, "height": 120}],
 }
 
 
@@ -61,10 +65,13 @@ def wrap_deg(deg):
 class BodySim:
     """Where the pretend robot is, and what it does when asked."""
 
-    def __init__(self, face="none"):
+    def __init__(self, face="none", face_x=FACE_X):
         if face not in FACES:
             raise ValueError("face must be one of %s" % ", ".join(FACES))
+        if not 0 <= int(face_x) < PICTURE_WIDTH:
+            raise ValueError("face_x must be 0 to %d" % (PICTURE_WIDTH - 1))
         self.face = face
+        self.face_x = int(face_x)
         self.x = 0.0            # cm. The wall is at x = WALL_X_CM
         self.y = 0.0            # cm. Plus is to the left of the start heading
         self.heading = 0.0      # degrees. 0 faces the wall. Left is positive
@@ -163,7 +170,8 @@ class BodySim:
         return self.ok("stop", msg="Stopped")
 
     def do_look(self, ask):
-        return self.ok("look", objects=[dict(f) for f in FACES[self.face]])
+        faces = [dict(f, x=self.face_x) for f in FACES[self.face]]
+        return self.ok("look", objects=faces)
 
     # Helpers
 
@@ -226,14 +234,14 @@ class Server(socketserver.ThreadingTCPServer):
         self.sim = sim or BodySim()
 
 
-def start_in_thread(host=HOST, port=0, face="none"):
+def start_in_thread(host=HOST, port=0, face="none", face_x=FACE_X):
     """Start a pretend body in the background. Returns the server.
 
     Port 0 picks a free port. Read it from server.server_address[1].
-    face is "none", "far" or "near". Used by the tests.
-    Call server.shutdown() when done.
+    face is "none", "far" or "near". face_x is 0 to 319. Used by the
+    tests. Call server.shutdown() when done.
     """
-    server = Server((host, port), BodySim(face=face))
+    server = Server((host, port), BodySim(face=face, face_x=face_x))
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server
@@ -244,15 +252,20 @@ def main(argv):
     parser.add_argument("--port", type=int, default=PORT, help="port to listen on (default 8765)")
     parser.add_argument("--face", choices=sorted(FACES), default="none",
                         help="what the pretend camera sees: none, far or near (default none)")
+    parser.add_argument("--face-x", type=int, default=FACE_X, metavar="0-319",
+                        help="where the face sits, left to right (default 160, the middle)")
     args = parser.parse_args(argv[1:])
+    if not 0 <= args.face_x < PICTURE_WIDTH:
+        parser.error("--face-x must be 0 to %d" % (PICTURE_WIDTH - 1))
     try:
-        server = Server((HOST, args.port), BodySim(face=args.face))
+        server = Server((HOST, args.port), BodySim(face=args.face, face_x=args.face_x))
     except OSError as e:
         print("Could not listen on port %d: %s" % (args.port, e))
         print("Is another pretend body already running? Stop it with Ctrl-C.")
         return 1
-    print("Pretend body on port %d. Wall at %.0f cm. Face: %s. Ctrl-C to stop."
-          % (args.port, WALL_X_CM, args.face), flush=True)
+    where = "" if args.face == "none" else " at x %d" % args.face_x
+    print("Pretend body on port %d. Wall at %.0f cm. Face: %s%s. Ctrl-C to stop."
+          % (args.port, WALL_X_CM, args.face, where), flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

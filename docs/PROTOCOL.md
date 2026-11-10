@@ -156,11 +156,14 @@ the way ahead is clear.
 
 The pretend body has a pretend camera too. By default it sees nobody.
 Start it with `--face near` and `look` returns one wide face with id 1.
-Start it with `--face far` and the same face is narrow. That is enough to
-test the watching loop without the robot.
+Start it with `--face far` and the same face is narrow. Add `--face-x`
+with a number from 0 to 319 to put the face off to one side. The default
+is 160, the middle. That is enough to test the watching loop, and the
+turn toward a face, without the robot.
 
 ```
 python3 nuc/body_sim.py --face near
+python3 nuc/body_sim.py --face near --face-x 40
 ```
 
 The pretend body moves instantly. The real body takes time, and that is

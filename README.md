@@ -80,6 +80,16 @@ With `near`, `look` returns one wide face with id 1. With `far`, the same
 face is narrow. Use these to test the watching loop before the HuskyLens
 is wired. The field names are in `docs/PROTOCOL.md`.
 
+The face sits in the middle of the picture, at x 160. To move it, add
+`--face-x` with a number from 0 to 319. Small is left, big is right.
+
+```
+python3 nuc/body_sim.py --face near --face-x 40
+python3 nuc/body_sim.py --face near --face-x 280
+```
+
+Use these to test that the robot turns toward a face.
+
 ## Week 1: the wheel math
 
 From the `nuc` folder:
@@ -104,9 +114,28 @@ To reach the real hub over the USB cable:
 adb forward tcp:8765 tcp:8765
 ```
 
+## The robot's AI model
+
+The robot thinks with a local model served by Ollama on the NUC. It is
+not a paid API. The agent reads three settings from a file called `.env`
+in this folder:
+
+| Name | What it is |
+|------|------------|
+| `MODEL_URL` | Where Ollama answers, for example `http://127.0.0.1:11434` |
+| `MODEL_NAME` | Which model to use |
+| `MODEL_KEY` | A key, if the server wants one. Ollama on the NUC does not |
+
+`.env` is listed in `.gitignore`. It never goes into the repo, and no key
+goes into any file that does. If you need to share the settings, write
+the three names down. Never the key.
+
+Ollama is not part of this kit. Nothing here installs it, and no model
+files belong in Git.
+
 ## Rules
 
 - Wheels off the floor for any code that has not driven before.
 - A step is done when its test passes on the real robot. The pretend body does not count.
 - Every change goes into Git. One repo holds the whole robot.
-- Nothing with a password or a key goes into Git. See `.gitignore`.
+- Nothing with a password or a key goes into Git. The key lives in `.env`. See `.gitignore`.

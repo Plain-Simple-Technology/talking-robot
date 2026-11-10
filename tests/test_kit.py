@@ -1,4 +1,4 @@
-"""Fourteen tests for the starter kit.
+"""Sixteen tests for the starter kit.
 
 Run from the kit folder:
 
@@ -8,7 +8,7 @@ They cover the three wheel patterns in the Week 1 table, the power cap,
 ping and status, a move that ends at the obstacle limit, a square that
 returns to its start, a refused bad command, a garbage line that gets an
 error instead of a crash, the 3 meter cap, and the pretend camera's three
-settings: none, far and near.
+settings: none, far and near, and a face moved to the left and the right.
 """
 
 import os
@@ -58,8 +58,8 @@ def make_body():
     """A factory: make_body(face) starts a pretend body and returns a Body."""
     servers = []
 
-    def make(face="none"):
-        server = body_sim.start_in_thread(face=face)
+    def make(face="none", face_x=body_sim.FACE_X):
+        server = body_sim.start_in_thread(face=face, face_x=face_x)
         servers.append(server)
         return Body(port=server.server_address[1])
 
@@ -168,3 +168,18 @@ def test_look_near(make_body):
     assert near["width"] >= 100
     assert near["width"] > far["width"]
     assert make_body("near").look()["sim"] is True
+
+
+@pytest.mark.parametrize("face_x", [40, 280])
+def test_face_x(make_body, face_x):
+    for setting in ("far", "near"):
+        answer = make_body(setting, face_x=face_x).look()
+        assert answer["sim"] is True
+        face = answer["objects"][0]
+        assert set(face) == FACE_FIELDS
+        assert face["id"] == 1
+        assert face["x"] == face_x
+        assert face["y"] == 120
+    # The default stays in the middle.
+    assert make_body("near").look()["objects"][0]["x"] == 160
+    assert make_body("none", face_x=face_x).look()["objects"] == []

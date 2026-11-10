@@ -5,10 +5,13 @@ __pycache__/
 venv/
 .venv/
 
-# Secrets. The API key never goes in Git.
+# Secrets. The model settings and any key live in .env. Never in Git.
 .env
 *.key
 secrets/
+
+# The robot's memory. The faces file holds people's names.
+memory/
 
 # Logs and recordings made during sessions
 *.log
