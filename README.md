@@ -16,7 +16,9 @@ before the real link works.
 | `nuc/mecanum.py` | The wheel math. Three wishes in, four wheel powers out |
 | `nuc/body_client.py` | The `Body` class. How the NUC talks to the body |
 | `nuc/body_sim.py` | The pretend body. Runs on the NUC, answers on port 8765 |
-| `tests/test_kit.py` | Eleven tests. All must pass before Week 1 |
+| `nuc/model_check.py` | Proves the NUC can reach the AI model. One question, a chat, or two tool checks |
+| `.env.example` | The three model settings. Copy it to `.env` and fill it in |
+| `tests/` | The tests. All must pass before Week 1 |
 
 Not in the kit: `BodyServer.java`. That is the real body, and the student
 writes it with Claude Code in Week 2. The starter ask is in the project doc.
@@ -29,8 +31,8 @@ In this folder:
 python3 -m pytest -q
 ```
 
-You should see `11 passed`. If you do not, copy the exact message into
-the logbook for the instructor.
+You should see every test pass. If you do not, copy the exact message
+into the logbook for the instructor.
 
 ## Week 2: try the pretend body
 
@@ -116,22 +118,47 @@ adb forward tcp:8765 tcp:8765
 
 ## The robot's AI model
 
-The robot thinks with a local model served by Ollama on the NUC. It is
-not a paid API. The agent reads three settings from a file called `.env`
-in this folder:
+The robot thinks with a local model. It is not a paid API. The model
+runs on a Mac mini that sits beside the robot, served by a program
+called Ollama. The NUC reaches it over the network, by the Mac mini's
+`.local` name. The NUC itself runs no model.
+
+The agent reads three settings from a file called `.env` in this folder.
+Copy `.env.example` to `.env` and fill it in:
 
 | Name | What it is |
 |------|------------|
-| `MODEL_URL` | Where Ollama answers, for example `http://127.0.0.1:11434` |
-| `MODEL_NAME` | Which model to use |
-| `MODEL_KEY` | A key, if the server wants one. Ollama on the NUC does not |
+| `MODEL_URL` | Where Ollama answers, for example `http://your-mac-mini.local:11434/v1` |
+| `MODEL_NAME` | Which model to use, for example `qwen3:8b` |
+| `MODEL_KEY` | A key, if the server wants one. Ollama does not, so `ollama` is fine |
 
 `.env` is listed in `.gitignore`. It never goes into the repo, and no key
 goes into any file that does. If you need to share the settings, write
 the three names down. Never the key.
 
-Ollama is not part of this kit. Nothing here installs it, and no model
-files belong in Git.
+Check the link before anything else is built. First install the one
+package it needs, then run it:
+
+```
+pip install openai
+python3 nuc/model_check.py
+python3 nuc/model_check.py --chat
+python3 nuc/model_check.py --tools
+```
+
+The first prints the model's name, asks one short question, and prints
+the answer and the seconds it took. `--chat` is a typed chat, and an
+empty line quits. `--tools` sends "Drive forward one meter" with one move
+tool and a plain question with the same tool, and says whether each came
+back right. If the model cannot be reached it says so in one line.
+
+Some models think before they answer. The thinking is not words, and it
+adds ten seconds or more before the first word. `model_check.py` turns it
+off with one setting, `reasoning_effort`, marked near the top of the
+file. The agent should do the same.
+
+Ollama and the models are not part of this kit. Nothing here installs
+them, and no model files belong in Git.
 
 ## Rules
 
