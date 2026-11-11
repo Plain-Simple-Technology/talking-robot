@@ -129,7 +129,7 @@ Copy `.env.example` to `.env` and fill it in:
 | Name | What it is |
 |------|------------|
 | `MODEL_URL` | Where Ollama answers, for example `http://your-mac-mini.local:11434/v1` |
-| `MODEL_NAME` | Which model to use, for example `qwen3:8b` |
+| `MODEL_NAME` | Which model to use, for example `llama3.1:8b` |
 | `MODEL_KEY` | A key, if the server wants one. Ollama does not, so `ollama` is fine |
 
 `.env` is listed in `.gitignore`. It never goes into the repo, and no key
